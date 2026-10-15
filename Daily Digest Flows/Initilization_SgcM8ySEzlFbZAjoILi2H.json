@@ -1,0 +1,1010 @@
+{
+  "name": "Initilization",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "5iCA6Kobb7kmH7Xpt2vZ8"
+  },
+  "author": "Ayushmaan Bhatnagar",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-manual-trigger",
+    "@activepieces/piece-gmail",
+    "@activepieces/piece-store",
+    "@activepieces/piece-open-router",
+    "@activepieces/piece-slack",
+    "@activepieces/piece-delay"
+  ],
+  "flows": [
+    {
+      "displayName": "Initilization",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "Manual Trigger",
+        "nextAction": {
+          "name": "step_2",
+          "skip": false,
+          "type": "PIECE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "auth": "{{connections['SUZWVHU5lNFK64xpt3B0n']}}",
+              "after_date": "{{new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]}}",
+              "max_results": "200",
+              "has_attachment": false,
+              "include_spam_trash": true
+            },
+            "pieceName": "@activepieces/piece-gmail",
+            "actionName": "gmail_search_mail",
+            "sampleData": {},
+            "pieceVersion": "0.13.0",
+            "propertySettings": {
+              "to": {
+                "type": "MANUAL"
+              },
+              "from": {
+                "type": "MANUAL"
+              },
+              "label": {
+                "type": "DYNAMIC"
+              },
+              "content": {
+                "type": "MANUAL"
+              },
+              "subject": {
+                "type": "MANUAL"
+              },
+              "category": {
+                "type": "DYNAMIC"
+              },
+              "after_date": {
+                "type": "MANUAL"
+              },
+              "before_date": {
+                "type": "MANUAL"
+              },
+              "max_results": {
+                "type": "MANUAL"
+              },
+              "has_attachment": {
+                "type": "MANUAL"
+              },
+              "attachment_name": {
+                "type": "MANUAL"
+              },
+              "include_spam_trash": {
+                "type": "MANUAL"
+              }
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": true
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_22",
+            "skip": false,
+            "type": "PIECE",
+            "valid": true,
+            "settings": {
+              "input": {
+                "key": "user_email",
+                "value": "{{step_2['output']['results']['messages'][0]['to']['value'][0]['address']}}",
+                "store_scope": "COLLECTION"
+              },
+              "pieceName": "@activepieces/piece-store",
+              "actionName": "put",
+              "sampleData": {},
+              "pieceVersion": "0.6.20",
+              "propertySettings": {
+                "key": {
+                  "type": "MANUAL"
+                },
+                "value": {
+                  "type": "MANUAL"
+                },
+                "store_scope": {
+                  "type": "MANUAL"
+                }
+              },
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_9",
+              "skip": false,
+              "type": "CODE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "EMAIL": "{{step_2['output']}}"
+                },
+                "sampleData": {},
+                "sourceCode": {
+                  "code": "export const code = async (inputs) => {\n  const raw = inputs['EMAIL'];\n  const emails = raw.results.messages;\n  \n  const senders = [...new Set(emails.map(e => {\n    const f = e.from;\n    if (typeof f === 'string') return f;\n    if (f?.address) return f.address;\n    if (f?.value?.[0]?.address) return f.value[0].address;\n    return { senders_list: senders };\n  }))];\n  \n  return { senders_list: senders.map(s => ({ address: s })) };\n}",
+                  "packageJson": "{}"
+                },
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_13",
+                "skip": false,
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "auth": "{{connections['DzOclOaqfXIlLgYHiNoSW']}}",
+                    "model": "z-ai/glm-5.3-flash",
+                    "prompt": "{{step_9['output']['senders_list']}}\n\nYou are a privacy-first email sender classifier.\nYour task is to identify email senders that are likely to send newsletters, news digests, blogs, media publications, or other recurring informational content.\nINPUT:\nYou will receive data in exactly this format:\n{\n  \"senders_list\": [\n    {\n      \"address\": \"example@email.com\"\n    }\n  ]\n}\nYou only have access to the sender's email address.\nYou DO NOT have access to:\n- Email subject\n- Email content\n- Attachments\n- Other inbox information\nClassify each sender internally based ONLY on the provided email address.\nRELEVANT CLASSIFICATIONS:\n1. NEWSLETTER\nUse when the sender is likely to be:\n- A newsletter\n- A news publication\n- An industry digest\n- A blog or media publication\n- A recurring informational source\n2. POSSIBLE_NEWSLETTER\nUse when the sender might be a newsletter or informational source, but the email address alone does not provide enough confidence.\nEXCLUSION RULE:\nIf a sender is likely to send any of the following, DO NOT include it in the output:\n- Security alerts\n- Authentication or account notifications\n- Banking or financial information\n- Transactional emails\n- Receipts or invoices\n- Personal communications\n- Job or application-specific updates\n- Event-specific communications\n- System notifications\n- Other non-newsletter content\nIMPORTANT PRIVACY RULES:\n- Use ONLY the email address to make your decision.\n- Do not assume access to email content or metadata.\n- Do not classify something as a newsletter simply because it comes from a company.\n- Do not classify something as a newsletter simply because it uses \"noreply\" or \"no-reply\".\n- When uncertain between NEWSLETTER and POSSIBLE_NEWSLETTER, prefer POSSIBLE_NEWSLETTER.\n- Prioritize user privacy and avoid unnecessarily allowing access to private email content.\nOUTPUT RULES:\nReturn ONLY senders classified as NEWSLETTER or POSSIBLE_NEWSLETTER.\nDo NOT include NOT_NEWSLETTER senders.\nDo NOT mention excluded senders.\nDo NOT explain which senders were discarded.\nReturn ONLY valid JSON in exactly this format:\n{\n  \"candidate_senders\": [\n    {\n      \"address\": \"example@email.com\",\n      \"classification\": \"NEWSLETTER\",\n      \"confidence\": 0.0\n    }\n  ]\n}\nConfidence must be between 0 and 1.\nIf no newsletter or possible newsletter senders are found, return:\n{\n  \"candidate_senders\": []\n}\nDo not include markdown.\nDo not include explanations outside the JSON."
+                  },
+                  "pieceName": "@activepieces/piece-open-router",
+                  "actionName": "ask-lmm",
+                  "sampleData": {},
+                  "pieceVersion": "0.1.9",
+                  "propertySettings": {
+                    "topP": {
+                      "type": "MANUAL"
+                    },
+                    "model": {
+                      "type": "MANUAL"
+                    },
+                    "prompt": {
+                      "type": "MANUAL"
+                    },
+                    "maxTokens": {
+                      "type": "MANUAL"
+                    },
+                    "temperature": {
+                      "type": "MANUAL"
+                    }
+                  },
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "nextAction": {
+                  "name": "step_17",
+                  "skip": false,
+                  "type": "CODE",
+                  "valid": true,
+                  "settings": {
+                    "input": {
+                      "SENDERS": "{{step_13['output']}}"
+                    },
+                    "sampleData": {},
+                    "sourceCode": {
+                      "code": "export const code = async (inputs) => {\n  const raw = JSON.parse(inputs.SENDERS);\n  \n  const senders = raw.candidate_senders\n    .filter(s => s.classification === 'NEWSLETTER' || s.classification === 'POSSIBLE_NEWSLETTER')\n    .map(s => s.address);\n  \n  return { senders };\n};",
+                      "packageJson": "{}"
+                    },
+                    "errorHandlingOptions": {
+                      "retryOnFailure": {
+                        "value": false
+                      },
+                      "continueOnFailure": {
+                        "value": false
+                      }
+                    }
+                  },
+                  "nextAction": {
+                    "name": "step_16",
+                    "skip": false,
+                    "type": "PIECE",
+                    "valid": true,
+                    "settings": {
+                      "input": {
+                        "key": "candidate_senders",
+                        "value": "{{step_17['output']['senders']}}",
+                        "store_scope": "COLLECTION"
+                      },
+                      "pieceName": "@activepieces/piece-store",
+                      "actionName": "put",
+                      "sampleData": {},
+                      "pieceVersion": "0.6.20",
+                      "propertySettings": {
+                        "key": {
+                          "type": "MANUAL"
+                        },
+                        "value": {
+                          "type": "MANUAL"
+                        },
+                        "store_scope": {
+                          "type": "MANUAL"
+                        }
+                      },
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "nextAction": {
+                      "name": "step_15",
+                      "skip": false,
+                      "type": "CODE",
+                      "valid": true,
+                      "settings": {
+                        "input": {
+                          "EMAIL": "{{step_2['output']}}",
+                          "SENDERS": "{{step_13['output']}}"
+                        },
+                        "sampleData": {},
+                        "sourceCode": {
+                          "code": "export const code = async (inputs) => {\n  const raw = inputs.EMAIL;\n  const emails = raw.results.messages;\n  const markdown = inputs.SENDERS; // markdown file with newsletter sender emails\n\n  // extract email addresses from markdown\n  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}/g;\n  const allowedSenders = [...new Set(markdown.match(emailRegex) || [])];\n\n  const result = {};\n\n  emails.forEach(e => {\n    const from = typeof e.from === 'string'\n      ? e.from\n      : e.from?.address || e.from?.value?.[0]?.address || JSON.stringify(e.from);\n\n    // only include if sender is in the markdown list\n    const isAllowed = allowedSenders.some(sender => from.includes(sender));\n    if (!isAllowed) return;\n\nconst body = e.text\n  ? e.text\n  : e.html\n    ? e.html.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim()\n    : '';\n\n    result[from] = body;\n  });\n\n  return result;\n};",
+                          "packageJson": "{}"
+                        },
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": false
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
+                        }
+                      },
+                      "nextAction": {
+                        "name": "step_14",
+                        "skip": false,
+                        "type": "PIECE",
+                        "valid": true,
+                        "settings": {
+                          "input": {
+                            "auth": "{{connections['DzOclOaqfXIlLgYHiNoSW']}}",
+                            "model": "z-ai/glm-5.3-flash",
+                            "prompt": "{{step_15['output']['noreply@unstop.news']}}\nYou are an email content analysis agent for a personalized daily news digest.\nYour task is to analyze the emails provided to you and determine what each email is primarily about.\nIMPORTANT CONTEXT:\nEvery email provided to you has already been classified in a previous step as either:\n- NEWSLETTER\n- POSSIBLE_NEWSLETTER\nTherefore, you should only analyze the emails provided in the input.\nYou do not need to classify whether an email is a newsletter.\nINPUT FORMAT:\nYou will receive a list of email objects with fields such as:\n{\n  \"emails\": [\n    {\n      \"from\": \"newsletter@example.com\",\n      \"subject\": \"This week's AI news\",\n      \"content\": \"...\"\n    }\n  ]\n}\nYOUR TASK:\nFor every email:\n1. Identify the sender.\n2. Determine the main topic of the email.\n3. Identify important subtopics.\n4. Briefly summarize what the message is about.\n5. Identify what topics this email suggests the user may be interested in.\nDo not summarize every minor detail.\nFocus on the overall purpose and recurring themes of the message.\nTOPIC EXAMPLES:\nTopics may include, but are not limited to:\n- Artificial Intelligence\n- Startups\n- Technology\n- Programming\n- Cybersecurity\n- Business\n- Finance\n- Science\n- Space\n- Gaming\n- Politics\n- Sports\n- Design\n- Education\n- Productivity\nYou may generate other relevant topics when necessary.\nIMPORTANT RULES:\n- Analyze only the provided email content.\n- Do not attempt to classify whether an email is a newsletter.\n- Do not invent information that is not present in the message.\n- Do not assume the user is interested in every topic mentioned once.\n- Prioritize topics that are central to the message.\n- Ignore boilerplate content such as unsubscribe links, privacy policies, cookie notices, and generic promotional footers.\n- If an email covers multiple unrelated topics, identify the main themes rather than treating every mentioned subject as equally important.\nOUTPUT:\nReturn ONLY valid JSON in exactly this format:\n{\n  \"email_analysis\": [\n    {\n      \"sender\": \"newsletter@example.com\",\n      \"subject\": \"This week's AI news\",\n      \"main_topic\": \"Artificial Intelligence\",\n      \"subtopics\": [\n        \"AI agents\",\n        \"Large language models\"\n      ],\n      \"summary\": \"A brief summary of what the email is primarily about.\",\n      \"informational_topics\": [\n        \"Artificial Intelligence\",\n        \"AI agents\"\n      ]\n    }\n  ]\n}\nIf no emails are provided, return:\n{\n  \"email_analysis\": []\n}\nDo not include markdown.\nDo not include explanations outside the JSON.\n\n\nAFTER ANALYZING ALL EMAILS:\nLook across the complete set of emails and identify recurring\ntopics and patterns.\nInfer the user's likely interests based on the overall collection,\nnot just on individual emails.\nOnly include topics that are supported by one or more emails.\nDo not assume the user is interested in every minor topic mentioned\nin an email.\nPrioritize topics that:\n- Appear repeatedly across multiple emails\n- Are central to the content of an email\n- Represent a clear recurring informational theme\nAdd the inferred interests to the \"suggested_interests\" section\nof the output."
+                          },
+                          "pieceName": "@activepieces/piece-open-router",
+                          "actionName": "ask-lmm",
+                          "sampleData": {},
+                          "pieceVersion": "0.1.9",
+                          "propertySettings": {
+                            "topP": {
+                              "type": "MANUAL"
+                            },
+                            "model": {
+                              "type": "MANUAL"
+                            },
+                            "prompt": {
+                              "type": "MANUAL"
+                            },
+                            "maxTokens": {
+                              "type": "MANUAL"
+                            },
+                            "temperature": {
+                              "type": "MANUAL"
+                            }
+                          },
+                          "errorHandlingOptions": {
+                            "retryOnFailure": {
+                              "value": false
+                            },
+                            "continueOnFailure": {
+                              "value": false
+                            }
+                          }
+                        },
+                        "nextAction": {
+                          "name": "step_1",
+                          "skip": false,
+                          "type": "PIECE",
+                          "valid": true,
+                          "settings": {
+                            "input": {
+                              "auth": "{{connections['DzOclOaqfXIlLgYHiNoSW']}}",
+                              "model": "z-ai/glm-5.3-flash",
+                              "prompt": "{{step_14['output']}}You are an onboarding assistant for a personalized daily news digest.\nYour task is to create a short and friendly message asking the user to confirm their interests.\nINPUT:\nYou will receive data in this format:\n{\n  \"email_analysis\": [...],\n  \"suggested_interests\": [...]\n}\nThe suggested interests were inferred from informational emails and newsletters previously analyzed.\nYOUR TASK:\nCreate a concise user-facing message that:\n1. Briefly state that these interests were inferred from the sources the user selected.\n2. Present the suggested interests as a short numbered or bulleted list.\n3. Ask the user to choose between exactly two options:\n   - SOUNDS GOOD — confirms the suggested interests.\n   - EDIT INTERESTS — allows the user to remove, add, or completely define their own interests.\n4. Do not mention internal fields such as \"email_analysis\", \"main_topic\", \"subtopics\", or \"informational_topics\".\n5. Do not mention confidence scores or internal AI classifications.\n6. Do not claim that the suggested interests are definitely correct.\n7. Keep the message short and clear.\nOUTPUT:\nReturn only the user-facing message.\nEXAMPLE OUTPUT:\nBased on the sources you selected, I think you may be interested in:\n• Artificial Intelligence\n• Startups\n• Technology\n• Cybersecurity\nDoes this look right? Hit \"Looks Good\" to confirm or \"Let me edit\" to change it.",
+                              "temperature": ".50"
+                            },
+                            "pieceName": "@activepieces/piece-open-router",
+                            "actionName": "ask-lmm",
+                            "sampleData": {},
+                            "pieceVersion": "0.1.9",
+                            "propertySettings": {
+                              "topP": {
+                                "type": "MANUAL"
+                              },
+                              "model": {
+                                "type": "MANUAL"
+                              },
+                              "prompt": {
+                                "type": "MANUAL"
+                              },
+                              "maxTokens": {
+                                "type": "MANUAL"
+                              },
+                              "temperature": {
+                                "type": "MANUAL"
+                              }
+                            },
+                            "errorHandlingOptions": {
+                              "retryOnFailure": {
+                                "value": false
+                              },
+                              "continueOnFailure": {
+                                "value": false
+                              }
+                            }
+                          },
+                          "nextAction": {
+                            "name": "step_4",
+                            "type": "PIECE",
+                            "valid": true,
+                            "settings": {
+                              "input": {
+                                "auth": "{{connections['jAQc4AFU1pzKuNkorJjJs']}}",
+                                "text": "{{step_1['output']}}",
+                                "actions": [
+                                  {
+                                    "label": "SOUNDS GOOD",
+                                    "style": "primary"
+                                  },
+                                  {
+                                    "label": "EDIT INTERESTS",
+                                    "style": "danger"
+                                  }
+                                ],
+                                "channel": "C0A4LFW20SF",
+                                "username": "Digest Bot",
+                                "replyBroadcast": false,
+                                "mentionOriginFlow": false
+                              },
+                              "pieceName": "@activepieces/piece-slack",
+                              "actionName": "request_action_message",
+                              "pieceVersion": "0.17.9",
+                              "propertySettings": {
+                                "info": {
+                                  "type": "MANUAL"
+                                },
+                                "text": {
+                                  "type": "MANUAL"
+                                },
+                                "actions": {
+                                  "type": "MANUAL"
+                                },
+                                "channel": {
+                                  "type": "MANUAL"
+                                },
+                                "threadTs": {
+                                  "type": "MANUAL"
+                                },
+                                "username": {
+                                  "type": "MANUAL"
+                                },
+                                "profilePicture": {
+                                  "type": "MANUAL"
+                                },
+                                "replyBroadcast": {
+                                  "type": "MANUAL"
+                                },
+                                "mentionOriginFlow": {
+                                  "type": "MANUAL"
+                                }
+                              },
+                              "errorHandlingOptions": {
+                                "retryOnFailure": {
+                                  "value": false
+                                },
+                                "continueOnFailure": {
+                                  "value": false
+                                }
+                              }
+                            },
+                            "nextAction": {
+                              "name": "step_3",
+                              "skip": false,
+                              "type": "ROUTER",
+                              "valid": true,
+                              "children": [
+                                {
+                                  "name": "step_5",
+                                  "type": "PIECE",
+                                  "valid": true,
+                                  "settings": {
+                                    "input": {
+                                      "auth": "{{connections['DzOclOaqfXIlLgYHiNoSW']}}",
+                                      "model": "z-ai/glm-5.3-flash",
+                                      "prompt": "You are an onboarding assistant for a personalized daily news digest.\nThe user has chosen to edit their interests instead of accepting the suggested interests.\nYour task is to ask the user what topics they would like their daily digest to focus on.\nKeep the message short, friendly, and conversational.\nClearly explain that the user can provide:\n- Broad topics, such as Artificial Intelligence, Technology, Business, or Space.\n- Specific interests, such as AI agents, startup funding, cybersecurity, or space exploration.\n- As many or as few interests as they want.\nEncourage the user to describe their interests naturally instead of forcing them into a strict format.\nOUTPUT:\nReturn only the user-facing message.\nEXAMPLE OUTPUT:\nNo problem. What topics are you interested in?\nYou can be as broad or specific as you like. For example: AI, startups, AI agents, cybersecurity, space, gaming, finance, or anything else you'd like to follow.\nJust tell me what you want your daily digest to focus on.",
+                                      "temperature": ".40"
+                                    },
+                                    "pieceName": "@activepieces/piece-open-router",
+                                    "actionName": "ask-lmm",
+                                    "sampleData": {},
+                                    "pieceVersion": "0.1.9",
+                                    "propertySettings": {
+                                      "topP": {
+                                        "type": "MANUAL"
+                                      },
+                                      "model": {
+                                        "type": "MANUAL"
+                                      },
+                                      "prompt": {
+                                        "type": "MANUAL"
+                                      },
+                                      "maxTokens": {
+                                        "type": "MANUAL"
+                                      },
+                                      "temperature": {
+                                        "type": "MANUAL"
+                                      }
+                                    },
+                                    "errorHandlingOptions": {
+                                      "retryOnFailure": {
+                                        "value": false
+                                      },
+                                      "continueOnFailure": {
+                                        "value": false
+                                      }
+                                    }
+                                  },
+                                  "nextAction": {
+                                    "name": "step_20",
+                                    "skip": false,
+                                    "type": "PIECE",
+                                    "valid": true,
+                                    "settings": {
+                                      "input": {
+                                        "auth": "{{connections['jAQc4AFU1pzKuNkorJjJs']}}",
+                                        "text": "{{step_5['output']}}",
+                                        "blocks": [],
+                                        "channel": "C0A4LFW20SF",
+                                        "username": "Digest Bot",
+                                        "sendAsBot": true,
+                                        "unfurlLinks": true,
+                                        "replyBroadcast": false,
+                                        "mentionOriginFlow": false
+                                      },
+                                      "pieceName": "@activepieces/piece-slack",
+                                      "actionName": "send_channel_message",
+                                      "sampleData": {},
+                                      "pieceVersion": "0.17.9",
+                                      "propertySettings": {
+                                        "file": {
+                                          "type": "MANUAL"
+                                        },
+                                        "info": {
+                                          "type": "MANUAL"
+                                        },
+                                        "text": {
+                                          "type": "MANUAL"
+                                        },
+                                        "blocks": {
+                                          "type": "MANUAL"
+                                        },
+                                        "channel": {
+                                          "type": "MANUAL"
+                                        },
+                                        "threadTs": {
+                                          "type": "MANUAL"
+                                        },
+                                        "username": {
+                                          "type": "MANUAL"
+                                        },
+                                        "iconEmoji": {
+                                          "type": "MANUAL"
+                                        },
+                                        "sendAsBot": {
+                                          "type": "MANUAL"
+                                        },
+                                        "unfurlLinks": {
+                                          "type": "MANUAL"
+                                        },
+                                        "profilePicture": {
+                                          "type": "MANUAL"
+                                        },
+                                        "replyBroadcast": {
+                                          "type": "MANUAL"
+                                        },
+                                        "mentionOriginFlow": {
+                                          "type": "MANUAL"
+                                        }
+                                      },
+                                      "errorHandlingOptions": {
+                                        "retryOnFailure": {
+                                          "value": false
+                                        },
+                                        "continueOnFailure": {
+                                          "value": false
+                                        }
+                                      }
+                                    },
+                                    "nextAction": {
+                                      "name": "step_7",
+                                      "type": "PIECE",
+                                      "valid": true,
+                                      "settings": {
+                                        "input": {
+                                          "unit": "minutes",
+                                          "delayFor": "2"
+                                        },
+                                        "pieceName": "@activepieces/piece-delay",
+                                        "actionName": "delayFor",
+                                        "pieceVersion": "0.3.34",
+                                        "propertySettings": {
+                                          "unit": {
+                                            "type": "MANUAL"
+                                          },
+                                          "delayFor": {
+                                            "type": "MANUAL"
+                                          },
+                                          "markdown": {
+                                            "type": "MANUAL"
+                                          }
+                                        },
+                                        "errorHandlingOptions": {
+                                          "retryOnFailure": {
+                                            "value": false
+                                          },
+                                          "continueOnFailure": {
+                                            "value": false
+                                          }
+                                        }
+                                      },
+                                      "nextAction": {
+                                        "name": "step_8",
+                                        "skip": false,
+                                        "type": "PIECE",
+                                        "valid": true,
+                                        "settings": {
+                                          "input": {
+                                            "auth": "{{connections['jAQc4AFU1pzKuNkorJjJs']}}",
+                                            "oldest": "{{step_20['output']['ts']}}",
+                                            "channel": "C0A4LFW20SF",
+                                            "inclusive": "false",
+                                            "includeAllMetadata": false
+                                          },
+                                          "pieceName": "@activepieces/piece-slack",
+                                          "actionName": "getChannelHistory",
+                                          "sampleData": {},
+                                          "pieceVersion": "0.17.9",
+                                          "propertySettings": {
+                                            "info": {
+                                              "type": "MANUAL"
+                                            },
+                                            "latest": {
+                                              "type": "MANUAL"
+                                            },
+                                            "oldest": {
+                                              "type": "MANUAL"
+                                            },
+                                            "channel": {
+                                              "type": "MANUAL"
+                                            },
+                                            "inclusive": {
+                                              "type": "DYNAMIC"
+                                            },
+                                            "includeAllMetadata": {
+                                              "type": "MANUAL"
+                                            }
+                                          },
+                                          "errorHandlingOptions": {
+                                            "retryOnFailure": {
+                                              "value": false
+                                            },
+                                            "continueOnFailure": {
+                                              "value": false
+                                            }
+                                          }
+                                        },
+                                        "nextAction": {
+                                          "name": "step_6",
+                                          "skip": false,
+                                          "type": "CODE",
+                                          "valid": true,
+                                          "settings": {
+                                            "input": {
+                                              "HISTORY": "{{step_8['output']}}"
+                                            },
+                                            "sampleData": {},
+                                            "sourceCode": {
+                                              "code": "export const code = async (inputs) => {\n  const messages = inputs.HISTORY?.messages || inputs.HISTORY || [];\n  \n  if (!Array.isArray(messages) || messages.length === 0) {\n    return { user_topics: 'no reply yet' };\n  }\n  \n  const userReply = messages\n    .filter(m => !m.bot_id && !m.subtype)\n    .pop();\n  \n  return { user_topics: userReply?.text || 'no reply yet' };\n};",
+                                              "packageJson": "{}"
+                                            },
+                                            "errorHandlingOptions": {
+                                              "retryOnFailure": {
+                                                "value": false
+                                              },
+                                              "continueOnFailure": {
+                                                "value": false
+                                              }
+                                            }
+                                          },
+                                          "nextAction": {
+                                            "name": "step_12",
+                                            "skip": false,
+                                            "type": "PIECE",
+                                            "valid": true,
+                                            "settings": {
+                                              "input": {
+                                                "key": "user_interests",
+                                                "value": "{{step_6['output']['user_topics']}}",
+                                                "store_scope": "COLLECTION"
+                                              },
+                                              "pieceName": "@activepieces/piece-store",
+                                              "actionName": "put",
+                                              "sampleData": {},
+                                              "pieceVersion": "0.6.20",
+                                              "propertySettings": {
+                                                "key": {
+                                                  "type": "MANUAL"
+                                                },
+                                                "value": {
+                                                  "type": "MANUAL"
+                                                },
+                                                "store_scope": {
+                                                  "type": "MANUAL"
+                                                }
+                                              },
+                                              "errorHandlingOptions": {
+                                                "retryOnFailure": {
+                                                  "value": false
+                                                },
+                                                "continueOnFailure": {
+                                                  "value": false
+                                                }
+                                              }
+                                            },
+                                            "displayName": "Put",
+                                            "lastUpdatedDate": "2026-08-31T09:23:55.317Z"
+                                          },
+                                          "displayName": "Code",
+                                          "lastUpdatedDate": "2026-08-31T09:23:55.317Z"
+                                        },
+                                        "displayName": "Get channel history",
+                                        "lastUpdatedDate": "2026-08-31T09:23:55.317Z"
+                                      },
+                                      "displayName": "Delay For",
+                                      "lastUpdatedDate": "2026-08-31T09:23:55.317Z"
+                                    },
+                                    "displayName": "Send Message To A Channel",
+                                    "lastUpdatedDate": "2026-08-31T09:23:55.316Z"
+                                  },
+                                  "displayName": "Ask LLM",
+                                  "lastUpdatedDate": "2026-08-31T09:23:55.316Z"
+                                },
+                                {
+                                  "name": "step_11",
+                                  "skip": false,
+                                  "type": "CODE",
+                                  "valid": true,
+                                  "settings": {
+                                    "input": {
+                                      "USER_TOPICS": "{{step_1['output']}}"
+                                    },
+                                    "sampleData": {},
+                                    "sourceCode": {
+                                      "code": "export const code = async (inputs) => {\n  const text = inputs.USER_TOPICS;\n  \n  // extract bullet points\n  const topics = text\n    .split('•')\n    .slice(1) // skip everything before first bullet\n    .map(t => t.trim())\n    .map(t => t.split('\\n')[0].trim()) // take only first line of each bullet\n    .filter(t => t.length > 0 && !t.includes('Does this look') && !t.includes('SOUNDS GOOD') && !t.includes('EDIT'));\n  \n  return { user_topics: topics };\n};",
+                                      "packageJson": "{}"
+                                    },
+                                    "errorHandlingOptions": {
+                                      "retryOnFailure": {
+                                        "value": false
+                                      },
+                                      "continueOnFailure": {
+                                        "value": false
+                                      }
+                                    }
+                                  },
+                                  "nextAction": {
+                                    "name": "step_10",
+                                    "skip": false,
+                                    "type": "PIECE",
+                                    "valid": true,
+                                    "settings": {
+                                      "input": {
+                                        "key": "user_interests",
+                                        "value": "{{step_11['output']['user_topics']}}",
+                                        "store_scope": "COLLECTION"
+                                      },
+                                      "pieceName": "@activepieces/piece-store",
+                                      "actionName": "put",
+                                      "sampleData": {},
+                                      "pieceVersion": "0.6.20",
+                                      "propertySettings": {
+                                        "key": {
+                                          "type": "MANUAL"
+                                        },
+                                        "value": {
+                                          "type": "MANUAL"
+                                        },
+                                        "store_scope": {
+                                          "type": "MANUAL"
+                                        }
+                                      },
+                                      "errorHandlingOptions": {
+                                        "retryOnFailure": {
+                                          "value": false
+                                        },
+                                        "continueOnFailure": {
+                                          "value": false
+                                        }
+                                      }
+                                    },
+                                    "displayName": "Put",
+                                    "lastUpdatedDate": "2026-08-31T09:23:55.318Z"
+                                  },
+                                  "displayName": "Code",
+                                  "lastUpdatedDate": "2026-08-31T09:23:55.318Z"
+                                }
+                              ],
+                              "settings": {
+                                "branches": [
+                                  {
+                                    "branchName": "EDIT",
+                                    "branchType": "CONDITION",
+                                    "conditions": [
+                                      [
+                                        {
+                                          "operator": "TEXT_CONTAINS",
+                                          "firstValue": "{{step_4['output']['action']}}",
+                                          "secondValue": "EDIT INTERESTS",
+                                          "caseSensitive": false
+                                        }
+                                      ]
+                                    ]
+                                  },
+                                  {
+                                    "branchName": "Otherwise",
+                                    "branchType": "FALLBACK"
+                                  }
+                                ],
+                                "sampleData": {},
+                                "executionType": "EXECUTE_FIRST_MATCH"
+                              },
+                              "nextAction": {
+                                "name": "step_18",
+                                "skip": false,
+                                "type": "PIECE",
+                                "valid": true,
+                                "settings": {
+                                  "input": {
+                                    "auth": "{{connections['jAQc4AFU1pzKuNkorJjJs']}}",
+                                    "text": "Where would you like your digest to be delivered to you?",
+                                    "actions": [
+                                      {
+                                        "label": "SLACK",
+                                        "style": null
+                                      },
+                                      {
+                                        "label": "EMAIL",
+                                        "style": null
+                                      }
+                                    ],
+                                    "channel": "C0A4LFW20SF",
+                                    "replyBroadcast": false,
+                                    "mentionOriginFlow": false
+                                  },
+                                  "pieceName": "@activepieces/piece-slack",
+                                  "actionName": "request_action_message",
+                                  "pieceVersion": "0.17.9",
+                                  "propertySettings": {
+                                    "info": {
+                                      "type": "MANUAL"
+                                    },
+                                    "text": {
+                                      "type": "MANUAL"
+                                    },
+                                    "actions": {
+                                      "type": "MANUAL"
+                                    },
+                                    "channel": {
+                                      "type": "MANUAL"
+                                    },
+                                    "threadTs": {
+                                      "type": "MANUAL"
+                                    },
+                                    "username": {
+                                      "type": "MANUAL"
+                                    },
+                                    "profilePicture": {
+                                      "type": "MANUAL"
+                                    },
+                                    "replyBroadcast": {
+                                      "type": "MANUAL"
+                                    },
+                                    "mentionOriginFlow": {
+                                      "type": "MANUAL"
+                                    }
+                                  },
+                                  "errorHandlingOptions": {
+                                    "retryOnFailure": {
+                                      "value": false
+                                    },
+                                    "continueOnFailure": {
+                                      "value": false
+                                    }
+                                  }
+                                },
+                                "nextAction": {
+                                  "name": "step_21",
+                                  "skip": false,
+                                  "type": "PIECE",
+                                  "valid": true,
+                                  "settings": {
+                                    "input": {
+                                      "auth": "{{connections['jAQc4AFU1pzKuNkorJjJs']}}",
+                                      "text": "THANKS!\nYou will get you digest Daily @8 A.M. through your selected channel.",
+                                      "blocks": [],
+                                      "channel": "C0A4LFW20SF",
+                                      "sendAsBot": true,
+                                      "unfurlLinks": true,
+                                      "replyBroadcast": false,
+                                      "mentionOriginFlow": false
+                                    },
+                                    "pieceName": "@activepieces/piece-slack",
+                                    "actionName": "send_channel_message",
+                                    "pieceVersion": "0.17.9",
+                                    "propertySettings": {
+                                      "file": {
+                                        "type": "MANUAL"
+                                      },
+                                      "info": {
+                                        "type": "MANUAL"
+                                      },
+                                      "text": {
+                                        "type": "MANUAL"
+                                      },
+                                      "blocks": {
+                                        "type": "MANUAL"
+                                      },
+                                      "channel": {
+                                        "type": "MANUAL"
+                                      },
+                                      "threadTs": {
+                                        "type": "MANUAL"
+                                      },
+                                      "username": {
+                                        "type": "MANUAL"
+                                      },
+                                      "iconEmoji": {
+                                        "type": "MANUAL"
+                                      },
+                                      "sendAsBot": {
+                                        "type": "MANUAL"
+                                      },
+                                      "unfurlLinks": {
+                                        "type": "MANUAL"
+                                      },
+                                      "profilePicture": {
+                                        "type": "MANUAL"
+                                      },
+                                      "replyBroadcast": {
+                                        "type": "MANUAL"
+                                      },
+                                      "mentionOriginFlow": {
+                                        "type": "MANUAL"
+                                      }
+                                    },
+                                    "errorHandlingOptions": {
+                                      "retryOnFailure": {
+                                        "value": false
+                                      },
+                                      "continueOnFailure": {
+                                        "value": false
+                                      }
+                                    }
+                                  },
+                                  "nextAction": {
+                                    "name": "step_19",
+                                    "skip": false,
+                                    "type": "PIECE",
+                                    "valid": true,
+                                    "settings": {
+                                      "input": {
+                                        "key": "user_channel",
+                                        "value": "{{step_18['output']['action']}}",
+                                        "store_scope": "COLLECTION"
+                                      },
+                                      "pieceName": "@activepieces/piece-store",
+                                      "actionName": "put",
+                                      "pieceVersion": "0.6.20",
+                                      "propertySettings": {
+                                        "key": {
+                                          "type": "MANUAL"
+                                        },
+                                        "value": {
+                                          "type": "MANUAL"
+                                        },
+                                        "store_scope": {
+                                          "type": "MANUAL"
+                                        }
+                                      },
+                                      "errorHandlingOptions": {
+                                        "retryOnFailure": {
+                                          "value": false
+                                        },
+                                        "continueOnFailure": {
+                                          "value": false
+                                        }
+                                      }
+                                    },
+                                    "displayName": "Put",
+                                    "lastUpdatedDate": "2026-08-31T09:23:55.318Z"
+                                  },
+                                  "displayName": "Send Message To A Channel",
+                                  "lastUpdatedDate": "2026-08-31T09:23:55.318Z"
+                                },
+                                "displayName": "Request Action in A Channel",
+                                "lastUpdatedDate": "2026-08-31T09:23:55.316Z"
+                              },
+                              "displayName": "Router",
+                              "lastUpdatedDate": "2026-08-31T09:23:55.316Z"
+                            },
+                            "displayName": "Request Action in A Channel",
+                            "lastUpdatedDate": "2026-08-31T09:23:55.316Z"
+                          },
+                          "displayName": "Ask LLM",
+                          "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+                        },
+                        "displayName": "Ask LLM",
+                        "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+                      },
+                      "displayName": "Code",
+                      "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+                    },
+                    "displayName": "Put",
+                    "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+                  },
+                  "displayName": "Code",
+                  "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+                },
+                "displayName": "Ask LLM",
+                "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+              },
+              "displayName": "Code",
+              "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+            },
+            "displayName": "Put",
+            "lastUpdatedDate": "2026-08-31T09:24:14.616Z"
+          },
+          "displayName": "Find Email",
+          "lastUpdatedDate": "2026-08-31T09:23:55.315Z"
+        },
+        "lastUpdatedDate": "2026-08-31T09:23:55.314Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "propertySettings": {
+            "markdown": {
+              "type": "MANUAL"
+            }
+          },
+          "pieceName": "@activepieces/piece-manual-trigger",
+          "pieceVersion": "0.0.7",
+          "triggerName": "manual_trigger",
+          "input": {}
+        }
+      },
+      "valid": true,
+      "schemaVersion": "24",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}

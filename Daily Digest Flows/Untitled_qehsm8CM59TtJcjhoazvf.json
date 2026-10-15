@@ -1,0 +1,658 @@
+{
+  "name": "Untitled",
+  "type": "SHARED",
+  "summary": "",
+  "description": "",
+  "tags": [],
+  "blogUrl": "",
+  "metadata": {
+    "externalId": "qSa7scUkXUDisPKgdvAJt"
+  },
+  "author": "Ayushmaan Bhatnagar",
+  "categories": [],
+  "pieces": [
+    "@activepieces/piece-schedule",
+    "@activepieces/piece-store",
+    "@activepieces/piece-gmail",
+    "@activepieces/piece-open-router",
+    "@activepieces/piece-slack"
+  ],
+  "flows": [
+    {
+      "displayName": "Untitled",
+      "trigger": {
+        "name": "trigger",
+        "valid": true,
+        "displayName": "Every Day",
+        "nextAction": {
+          "name": "step_1",
+          "skip": false,
+          "type": "PIECE",
+          "valid": true,
+          "settings": {
+            "input": {
+              "key": "user_interests",
+              "store_scope": "COLLECTION"
+            },
+            "pieceName": "@activepieces/piece-store",
+            "actionName": "get",
+            "sampleData": {},
+            "pieceVersion": "0.6.20",
+            "propertySettings": {
+              "key": {
+                "type": "MANUAL"
+              },
+              "store_scope": {
+                "type": "MANUAL"
+              },
+              "defaultValue": {
+                "type": "MANUAL"
+              }
+            },
+            "errorHandlingOptions": {
+              "retryOnFailure": {
+                "value": false
+              },
+              "continueOnFailure": {
+                "value": false
+              }
+            }
+          },
+          "nextAction": {
+            "name": "step_2",
+            "skip": false,
+            "type": "CODE",
+            "valid": true,
+            "settings": {
+              "input": {},
+              "sampleData": {},
+              "sourceCode": {
+                "code": "export const code = async (inputs) => {\n  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)\n    .toISOString()\n    .split('T')[0];\n  return { yesterday };\n};",
+                "packageJson": "{}"
+              },
+              "errorHandlingOptions": {
+                "retryOnFailure": {
+                  "value": false
+                },
+                "continueOnFailure": {
+                  "value": false
+                }
+              }
+            },
+            "nextAction": {
+              "name": "step_4",
+              "skip": false,
+              "type": "PIECE",
+              "valid": true,
+              "settings": {
+                "input": {
+                  "key": "candidate_senders",
+                  "store_scope": "COLLECTION"
+                },
+                "pieceName": "@activepieces/piece-store",
+                "actionName": "get",
+                "sampleData": {},
+                "pieceVersion": "0.6.20",
+                "propertySettings": {
+                  "key": {
+                    "type": "MANUAL"
+                  },
+                  "store_scope": {
+                    "type": "MANUAL"
+                  },
+                  "defaultValue": {
+                    "type": "MANUAL"
+                  }
+                },
+                "errorHandlingOptions": {
+                  "retryOnFailure": {
+                    "value": false
+                  },
+                  "continueOnFailure": {
+                    "value": false
+                  }
+                }
+              },
+              "nextAction": {
+                "name": "step_3",
+                "skip": false,
+                "type": "PIECE",
+                "valid": true,
+                "settings": {
+                  "input": {
+                    "auth": "{{connections['KXRAcnfKehn94XIWTj05A']}}",
+                    "from": "{{step_4['output']}}",
+                    "label": null,
+                    "category": null,
+                    "after_date": "{{step_2['output']['yesterday']}}",
+                    "max_results": 10,
+                    "has_attachment": false,
+                    "include_spam_trash": false
+                  },
+                  "pieceName": "@activepieces/piece-gmail",
+                  "actionName": "gmail_search_mail",
+                  "sampleData": {},
+                  "pieceVersion": "0.13.0",
+                  "propertySettings": {
+                    "to": {
+                      "type": "MANUAL"
+                    },
+                    "from": {
+                      "type": "MANUAL"
+                    },
+                    "label": {
+                      "type": "MANUAL"
+                    },
+                    "content": {
+                      "type": "MANUAL"
+                    },
+                    "subject": {
+                      "type": "MANUAL"
+                    },
+                    "category": {
+                      "type": "MANUAL"
+                    },
+                    "after_date": {
+                      "type": "MANUAL"
+                    },
+                    "before_date": {
+                      "type": "MANUAL"
+                    },
+                    "max_results": {
+                      "type": "MANUAL"
+                    },
+                    "has_attachment": {
+                      "type": "MANUAL"
+                    },
+                    "attachment_name": {
+                      "type": "MANUAL"
+                    },
+                    "include_spam_trash": {
+                      "type": "MANUAL"
+                    }
+                  },
+                  "errorHandlingOptions": {
+                    "retryOnFailure": {
+                      "value": false
+                    },
+                    "continueOnFailure": {
+                      "value": false
+                    }
+                  }
+                },
+                "nextAction": {
+                  "name": "step_14",
+                  "skip": false,
+                  "type": "CODE",
+                  "valid": true,
+                  "settings": {
+                    "input": {
+                      "emailRaw": "{{step_3['output']}}"
+                    },
+                    "sampleData": {},
+                    "sourceCode": {
+                      "code": "export const code = async (inputs) => {\n  const emailRaw = inputs.emailRaw;\n  \n  const emails = (emailRaw?.results?.messages || []).map(e => {\n    const body = e.text || '';\n    const urlMatch = body.match(/https?:\\/\\/[^\\s]+/);\n    const link = urlMatch ? urlMatch[0] : null;\n\n    const summary = e.text \n      ? e.text.slice(0, 500)\n      : e.html\n        ? e.html.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 500)\n        : e.textAsHtml\n          ? e.textAsHtml.replace(/<[^>]*>/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, 500)\n          : '';\n\n    return {\n      title: e.subject,\n      link: link,\n      summary: summary,\n      published: e.date,\n      source: typeof e.from === 'string' ? e.from : e.from?.address || ''\n    };\n  });\n\n  return { emails };\n};",
+                      "packageJson": "{}"
+                    },
+                    "errorHandlingOptions": {
+                      "retryOnFailure": {
+                        "value": false
+                      },
+                      "continueOnFailure": {
+                        "value": false
+                      }
+                    }
+                  },
+                  "nextAction": {
+                    "name": "step_7",
+                    "skip": false,
+                    "type": "CODE",
+                    "valid": true,
+                    "settings": {
+                      "input": {},
+                      "sampleData": {},
+                      "sourceCode": {
+                        "code": "export const code = async (inputs) => {\n  const feeds = [\n    'https://hnrss.org/frontpage',\n    'https://techcrunch.com/category/artificial-intelligence/feed/',\n    'https://www.technologyreview.com/topic/artificial-intelligence/feed',\n    'https://breakingdefense.com/feed/',\n    'https://www.theverge.com/ai-artificial-intelligence/rss/index.xml'\n  ];\n\n  const results = await Promise.allSettled(\n    feeds.map(url => fetch(url).then(r => r.text()))\n  );\n\n  const allItems = [];\n  const failedSources = [];\n\n  results.forEach((result, i) => {\n    if (result.status === 'rejected') {\n      failedSources.push(feeds[i]);\n      return;\n    }\n\n    const xml = result.value;\n    const items = [...xml.matchAll(/<item>([\\s\\S]*?)<\\/item>/g)].map(m => {\n      const block = m[1];\n      const get = tag => {\n        const match = block.match(new RegExp(`<${tag}[^>]*><!\\\\[CDATA\\\\[([\\\\s\\\\S]*?)\\\\]\\\\]><\\\\/${tag}>|<${tag}[^>]*>([\\\\s\\\\S]*?)<\\\\/${tag}>`));\n        return match ? (match[1] || match[2] || '').trim() : '';\n      };\n      return {\n        title: get('title'),\n        link: get('link'),\n        summary: get('description'),\n        published: get('pubDate'),\n        source: feeds[i]\n      };\n    }).filter(item => {\n      const pub = new Date(item.published);\n      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);\n      return pub > cutoff;\n    });\n\n    allItems.push(...items);\n  });\n\n  return { rss_items: allItems, failed_sources: failedSources };\n};",
+                        "packageJson": "{}"
+                      },
+                      "errorHandlingOptions": {
+                        "retryOnFailure": {
+                          "value": false
+                        },
+                        "continueOnFailure": {
+                          "value": false
+                        }
+                      }
+                    },
+                    "nextAction": {
+                      "name": "step_5",
+                      "skip": false,
+                      "type": "CODE",
+                      "valid": true,
+                      "settings": {
+                        "input": {
+                          "TOPICS": "{{step_1['output']}}",
+                          "API_KEY": "{{variables['SERPER']}}"
+                        },
+                        "sampleData": {},
+                        "sourceCode": {
+                          "code": "export const code = async (inputs) => {\n  const apiKey = inputs.API_KEY;\nconst raw = inputs.TOPICS?.value || inputs.TOPICS;\nconst topics = Array.isArray(raw) \n  ? raw \n  : (() => { try { return JSON.parse(raw); } catch { return raw.split(',').map(t => t.trim()).filter(Boolean); } })();\n\n  const results = await Promise.allSettled(\n    topics.map(topic =>\n      fetch('https://google.serper.dev/news', {\n        method: 'POST',\n        headers: {\n          'X-API-KEY': apiKey,\n          'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({\n          q: topic,\n          num: 5,\n          tbs: 'qdr:d' // last 24 hours\n        })\n      }).then(r => r.json())\n    )\n  );\n\n  const allResults = results\n    .filter(r => r.status === 'fulfilled')\n    .flatMap((r, i) =>\n      (r.value.news || []).map(item => ({\n        title: item.title,\n        link: item.link,\n        summary: item.snippet,\n        source: item.source,\n        published: item.date,\n        topic: topics[i]\n      }))\n    );\n\n  return { search_results: allResults };\n};",
+                          "packageJson": "{}"
+                        },
+                        "errorHandlingOptions": {
+                          "retryOnFailure": {
+                            "value": false
+                          },
+                          "continueOnFailure": {
+                            "value": false
+                          }
+                        }
+                      },
+                      "nextAction": {
+                        "name": "step_6",
+                        "skip": false,
+                        "type": "CODE",
+                        "valid": true,
+                        "settings": {
+                          "input": {
+                            "RSS_RESULTS": "{{step_7['output']['rss_items']}}",
+                            "EMAIL_RESULTS": "{{step_3['output']}}",
+                            "SEARCH_RESULTS": "{{step_5['output']['search_results']}}"
+                          },
+                          "sampleData": {},
+                          "sourceCode": {
+                            "code": "export const code = async (inputs) => {\n\n  // ==========================================\n  // NORMALIZE INPUTS\n  // ==========================================\n\n  const searchResults = Array.isArray(inputs.SEARCH_RESULTS) ? inputs.SEARCH_RESULTS : [];\n  const rssResults = Array.isArray(inputs.RSS_RESULTS) ? inputs.RSS_RESULTS : [];\n  const emailRaw = inputs.EMAIL_RESULTS || {};\n\n  // ==========================================\n  // GET TOPICS\n  // ==========================================\n\n  const rawTopics = inputs.TOPICS || inputs.INTERESTS || inputs.RELEVANT_TOPICS || [];\n  let topics = [];\n\n  if (Array.isArray(rawTopics)) {\n    topics = rawTopics;\n  } else if (typeof rawTopics === 'string') {\n    try {\n      const parsed = JSON.parse(rawTopics);\n      topics = Array.isArray(parsed) ? parsed : [rawTopics];\n    } catch {\n      topics = rawTopics.split(',').map(t => t.trim()).filter(Boolean);\n    }\n  } else if (typeof rawTopics === 'object') {\n    topics = rawTopics.topics || rawTopics.interests || [];\n  }\n\n  topics = topics.map(t => typeof t === 'string' ? t : t.name || t.topic || '').filter(Boolean).map(t => t.trim());\n  const normalizedTopics = topics.map(t => t.toLowerCase());\n\n  // ==========================================\n  // PROCESS EMAILS\n  // ==========================================\n\n  const emailMessages = emailRaw?.results?.messages || emailRaw?.messages || [];\n\n  const emails = emailMessages.map(e => {\n    const body = e.text || e.body || e.snippet || '';\n    const urlMatch = body.match(/https?:\\/\\/[^\\s<>\"']+/);\n    return {\n      title: e.subject || '(No subject)',\n      link: urlMatch ? urlMatch[0] : null,\n      summary: body.slice(0, 1000),\n      published: e.date || e.timestamp || null,\n      source: typeof e.from === 'string' ? e.from : e.from?.address || e.sender || '',\n      source_type: 'email',\n      type: 'EMAIL'\n    };\n  });\n\n  // ==========================================\n  // NORMALIZE EXTERNAL RESULTS\n  // ==========================================\n\n  const normalizeItem = (item, defaultType = 'WEB') => {\n    if (!item) return null;\n    return {\n      ...item,\n      title: item.title || item.name || item.headline || '',\n      link: item.link || item.url || item.href || null,\n      summary: item.summary || item.description || item.content || item.snippet || '',\n      published: item.published || item.date || item.pubDate || item.timestamp || null,\n      source: item.source || item.source_name || item.domain || '',\n      source_type: item.source_type || defaultType.toLowerCase(),\n      type: item.type || defaultType\n    };\n  };\n\n  const normalizedSearch = searchResults.map(item => normalizeItem(item, 'WEB')).filter(Boolean);\n  const normalizedRSS = rssResults.map(item => normalizeItem(item, 'RSS')).filter(Boolean);\n\n  // ==========================================\n  // FETCH HACKER NEWS\n  // ==========================================\n\n  let hackerNews = [];\n\n  try {\n    const response = await fetch('https://hacker-news.firebaseio.com/v0/topstories.json');\n    if (!response.ok) throw new Error(`HN API error: ${response.status}`);\n    const storyIds = await response.json();\n    const topIds = storyIds.slice(0, 30);\n\n    const stories = await Promise.all(\n      topIds.map(async (id, index) => {\n        try {\n          const storyResponse = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);\n          if (!storyResponse.ok) return null;\n          const story = await storyResponse.json();\n          if (!story || story.type !== 'story' || !story.title) return null;\n          return {\n            id: story.id,\n            title: story.title,\n            link: story.url || `https://news.ycombinator.com/item?id=${story.id}`,\n            summary: story.text || '',\n            published: story.time ? new Date(story.time * 1000).toISOString() : null,\n            source: 'Hacker News',\n            source_type: 'hackernews',\n            type: 'HACKERNEWS',\n            hn_score: story.score || 0,\n            comments: story.descendants || 0,\n            hn_rank: index + 1,\n            hn_id: story.id\n          };\n        } catch { return null; }\n      })\n    );\n\n    hackerNews = stories.filter(Boolean);\n  } catch (error) {\n    console.log('Hacker News fetch failed:', error.message);\n  }\n\n  // ==========================================\n  // TRUSTED SOURCES\n  // ==========================================\n\n  const trustedDomains = [\n    'techcrunch.com', 'theverge.com', 'wired.com', 'arstechnica.com',\n    'technologyreview.com', 'venturebeat.com', 'reuters.com', 'bloomberg.com',\n    'ft.com', 'nature.com', 'science.org', 'openai.com', 'anthropic.com',\n    'breakingdefense.com', 'defenseone.com', 'economictimes.com',\n    'livemint.com', 'moneycontrol.com', 'businessstandard.com',\n    'ycombinator.com', 'unstop.com', 'internshala.com', 'linkedin.com'\n  ];\n\n  const isTrusted = (item) => {\n    const text = [item.link || '', item.source || ''].join(' ').toLowerCase();\n    return trustedDomains.some(domain => text.includes(domain));\n  };\n\n  // ==========================================\n  // TOPIC RELEVANCE\n  // ==========================================\n\n  const getRelevanceScore = (item) => {\n    if (!normalizedTopics.length) return 0;\n    const text = [item.title || '', item.summary || '', item.source || ''].join(' ').toLowerCase();\n    let score = 0;\n    normalizedTopics.forEach(topic => {\n      if (!topic) return;\n      if (text.includes(topic)) score += 10;\n      const words = topic.split(/\\s+/).filter(word => word.length > 2);\n      let matchedWords = 0;\n      words.forEach(word => { if (text.includes(word)) { matchedWords += 1; score += 2; } });\n      if (words.length > 1 && matchedWords === words.length) score += 5;\n    });\n    return score;\n  };\n\n  // ==========================================\n  // COMBINE + SCORE EVERYTHING\n  // ==========================================\n\n  const allItems = [\n    ...normalizedSearch,\n    ...normalizedRSS,\n    ...emails,\n    ...hackerNews\n  ].filter(item => item && item.title);\n\n  const scored = allItems.map(item => {\n    const relevance = getRelevanceScore(item);\n    const trusted = isTrusted(item);\n    const hnPopularity = item.type === 'HACKERNEWS' ? Math.min((item.hn_score || 0) / 10, 20) : 0;\n    const hnRankBonus = item.type === 'HACKERNEWS' ? Math.max(0, 15 - (item.hn_rank || 15)) : 0;\n\n    return {\n      ...item,\n      trusted,\n      relevance_score: relevance,\n      priority_score: (relevance * 10) + (trusted ? 25 : 0) + hnPopularity + hnRankBonus\n    };\n  });\n\n  // ==========================================\n  // DEDUPLICATE\n  // ==========================================\n\n  const seenTitles = new Set();\n  const seenLinks = new Set();\n\n  const deduped = scored\n    .sort((a, b) => b.priority_score - a.priority_score)\n    .filter(item => {\n      if (!item || !item.title) return false;\n      const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\\s+/g, ' ').trim();\n      const normalizedLink = item.link ? item.link.toLowerCase().replace(/\\/$/, '') : '';\n      if (seenTitles.has(normalizedTitle)) return false;\n      if (normalizedLink && seenLinks.has(normalizedLink)) return false;\n      seenTitles.add(normalizedTitle);\n      if (normalizedLink) seenLinks.add(normalizedLink);\n      return true;\n    });\n\n  // ==========================================\n  // CAP AT 20 FOR CLAUDE\n  // ==========================================\n\n  const filtered_results = deduped.slice(0, 25);\n\n  // ==========================================\n  // OUTPUT\n  // ==========================================\n\n  return {\n    filtered_results,\n    metadata: {\n      topics_used: topics,\n      total_before_cap: deduped.length,\n      search_results: normalizedSearch.length,\n      rss_results: normalizedRSS.length,\n      email_results: emails.length,\n      hackernews_stories: hackerNews.length,\n      relevant_stories: filtered_results.filter(i => i.relevance_score > 0).length,\n      trusted_stories: filtered_results.filter(i => i.trusted).length\n    }\n  };\n};",
+                            "packageJson": "{}"
+                          },
+                          "errorHandlingOptions": {
+                            "retryOnFailure": {
+                              "value": false
+                            },
+                            "continueOnFailure": {
+                              "value": false
+                            }
+                          }
+                        },
+                        "nextAction": {
+                          "name": "step_11",
+                          "skip": false,
+                          "type": "PIECE",
+                          "valid": true,
+                          "settings": {
+                            "input": {
+                              "auth": "{{connections['DzOclOaqfXIlLgYHiNoSW']}}",
+                              "model": "z-ai/glm-5.3-flash",
+                              "prompt": "{{step_6['output']}}You are a personalized daily digest assistant.\nYour task is to create a concise, readable daily digest from the provided input.\nINPUT FORMAT:\nYou will receive data containing:\n{\n  \"filtered_results\": [\n    {\n      \"title\": \"Item title\",\n      \"link\": \"Article URL\",\n      \"summary\": \"Article summary or empty string\",\n      \"source\": \"Source name\",\n      \"published\": \"Publication time\",\n      \"topic\": \"Topic if available\",\n      \"trusted\": true,\n      \"relevance_score\": 0,\n      \"source_type\": \"external | hackernews\"\n    }\n  ],\n  \"metadata\": {}\n}\nYOUR TASK:\nCreate a concise digest using every item in filtered_results.\nFor each item:\n1. Display the title.\n2. Write a concise explanation of what the item is about in 1–2 lines.\n3. Use the provided summary as the primary source of information.\n4. If the summary is empty, use only the title and clearly available information to create a brief description.\n5. Do not invent facts, details, or claims that are not supported by the provided data.\n6. Include the original link so the user can access the full item.\nSOURCE HANDLING:\nEXTERNAL SOURCES:\n- Use the title and provided summary.\n- Clean HTML tags and HTML-encoded characters when necessary.\n- Extract only meaningful text from summaries containing HTML.\n- Do not include raw HTML in the final digest.\nHACKER NEWS:\n- If a summary is available, use it.\n- If the summary is empty, briefly describe the item based only on its title.\n- You may mention that the item appeared on Hacker News if useful.\n- Do not invent details about the linked article.\n- Do not mention internal Hacker News metadata such as hn_score, comments, or hn_rank unless explicitly provided and useful.\nOUTPUT FORMAT:\nStart with:\n📰 DAILY DIGEST\nFor each item:\n**[Title]**\n[Concise 1–2 line explanation]\n🔗 Read more: [link]\nSeparate each item with a blank line.\nIMPORTANT RULES:\n- Include every item in filtered_results.\n- Do not remove items because their summary is empty.\n- Do not invent information.\n- Do not fetch or access the provided links.\n- Do not mention internal fields such as:\n  - trusted\n  - relevance_score\n  - source_type\n  - metadata\n- Keep each explanation concise and useful.\n- Avoid unnecessary introductions, conclusions, or filler.\n- Return only the final user-facing digest.",
+                              "temperature": ".85"
+                            },
+                            "pieceName": "@activepieces/piece-open-router",
+                            "actionName": "ask-lmm",
+                            "sampleData": {},
+                            "pieceVersion": "0.1.9",
+                            "propertySettings": {
+                              "topP": {
+                                "type": "MANUAL"
+                              },
+                              "model": {
+                                "type": "MANUAL"
+                              },
+                              "prompt": {
+                                "type": "MANUAL"
+                              },
+                              "maxTokens": {
+                                "type": "MANUAL"
+                              },
+                              "temperature": {
+                                "type": "MANUAL"
+                              }
+                            },
+                            "errorHandlingOptions": {
+                              "retryOnFailure": {
+                                "value": false
+                              },
+                              "continueOnFailure": {
+                                "value": false
+                              }
+                            }
+                          },
+                          "nextAction": {
+                            "name": "step_8",
+                            "skip": false,
+                            "type": "PIECE",
+                            "valid": true,
+                            "settings": {
+                              "input": {
+                                "key": "user_channel",
+                                "store_scope": "COLLECTION"
+                              },
+                              "pieceName": "@activepieces/piece-store",
+                              "actionName": "get",
+                              "sampleData": {},
+                              "pieceVersion": "0.6.20",
+                              "propertySettings": {
+                                "key": {
+                                  "type": "MANUAL"
+                                },
+                                "store_scope": {
+                                  "type": "MANUAL"
+                                },
+                                "defaultValue": {
+                                  "type": "MANUAL"
+                                }
+                              },
+                              "errorHandlingOptions": {
+                                "retryOnFailure": {
+                                  "value": false
+                                },
+                                "continueOnFailure": {
+                                  "value": false
+                                }
+                              }
+                            },
+                            "nextAction": {
+                              "name": "step_9",
+                              "skip": false,
+                              "type": "ROUTER",
+                              "valid": true,
+                              "children": [
+                                {
+                                  "name": "step_13",
+                                  "skip": false,
+                                  "type": "PIECE",
+                                  "valid": true,
+                                  "settings": {
+                                    "input": {
+                                      "key": "user_email",
+                                      "store_scope": "COLLECTION"
+                                    },
+                                    "pieceName": "@activepieces/piece-store",
+                                    "actionName": "get",
+                                    "sampleData": {},
+                                    "pieceVersion": "0.6.20",
+                                    "propertySettings": {
+                                      "key": {
+                                        "type": "MANUAL"
+                                      },
+                                      "store_scope": {
+                                        "type": "MANUAL"
+                                      },
+                                      "defaultValue": {
+                                        "type": "MANUAL"
+                                      }
+                                    },
+                                    "errorHandlingOptions": {
+                                      "retryOnFailure": {
+                                        "value": false
+                                      },
+                                      "continueOnFailure": {
+                                        "value": false
+                                      }
+                                    }
+                                  },
+                                  "nextAction": {
+                                    "name": "step_15",
+                                    "skip": false,
+                                    "type": "CODE",
+                                    "valid": true,
+                                    "settings": {
+                                      "input": {
+                                        "email": "{{step_13['output']}}"
+                                      },
+                                      "sampleData": {},
+                                      "sourceCode": {
+                                        "code": "export const code = async (inputs) => {\n  const email = inputs.email;\n\n  return {\n    receiver_email: [email]\n  };\n};",
+                                        "packageJson": "{}"
+                                      },
+                                      "errorHandlingOptions": {
+                                        "retryOnFailure": {
+                                          "value": false
+                                        },
+                                        "continueOnFailure": {
+                                          "value": false
+                                        }
+                                      }
+                                    },
+                                    "nextAction": {
+                                      "name": "step_10",
+                                      "skip": false,
+                                      "type": "PIECE",
+                                      "valid": true,
+                                      "settings": {
+                                        "input": {
+                                          "cc": [],
+                                          "bcc": [],
+                                          "auth": "{{connections['KXRAcnfKehn94XIWTj05A']}}",
+                                          "body": "{{step_11['output']}}",
+                                          "draft": false,
+                                          "subject": "Your Daily Digest!",
+                                          "receiver": [
+                                            "{{step_15['output']['receiver_email']}}"
+                                          ],
+                                          "reply_to": [],
+                                          "body_type": "plain_text",
+                                          "attachments": []
+                                        },
+                                        "pieceName": "@activepieces/piece-gmail",
+                                        "actionName": "send_email",
+                                        "sampleData": {},
+                                        "pieceVersion": "0.13.0",
+                                        "propertySettings": {
+                                          "cc": {
+                                            "type": "MANUAL"
+                                          },
+                                          "bcc": {
+                                            "type": "MANUAL"
+                                          },
+                                          "body": {
+                                            "type": "MANUAL"
+                                          },
+                                          "from": {
+                                            "type": "MANUAL"
+                                          },
+                                          "draft": {
+                                            "type": "MANUAL"
+                                          },
+                                          "subject": {
+                                            "type": "MANUAL"
+                                          },
+                                          "receiver": {
+                                            "type": "MANUAL"
+                                          },
+                                          "reply_to": {
+                                            "type": "MANUAL"
+                                          },
+                                          "body_type": {
+                                            "type": "MANUAL"
+                                          },
+                                          "attachments": {
+                                            "type": "MANUAL"
+                                          },
+                                          "in_reply_to": {
+                                            "type": "MANUAL"
+                                          },
+                                          "sender_name": {
+                                            "type": "MANUAL"
+                                          }
+                                        },
+                                        "errorHandlingOptions": {
+                                          "retryOnFailure": {
+                                            "value": false
+                                          },
+                                          "continueOnFailure": {
+                                            "value": false
+                                          }
+                                        }
+                                      },
+                                      "displayName": "Send Email",
+                                      "lastUpdatedDate": "2026-08-31T09:31:23.475Z"
+                                    },
+                                    "displayName": "Code",
+                                    "lastUpdatedDate": "2026-08-31T09:31:06.750Z"
+                                  },
+                                  "displayName": "Get",
+                                  "lastUpdatedDate": "2026-08-31T09:28:03.935Z"
+                                },
+                                {
+                                  "name": "step_12",
+                                  "skip": false,
+                                  "type": "PIECE",
+                                  "valid": true,
+                                  "settings": {
+                                    "input": {
+                                      "auth": "{{connections['jAQc4AFU1pzKuNkorJjJs']}}",
+                                      "text": "{{step_11['output']}}",
+                                      "blocks": [],
+                                      "channel": "C0A4LFW20SF",
+                                      "username": "Digest Bot",
+                                      "sendAsBot": false,
+                                      "unfurlLinks": true,
+                                      "replyBroadcast": false,
+                                      "mentionOriginFlow": false
+                                    },
+                                    "pieceName": "@activepieces/piece-slack",
+                                    "actionName": "send_channel_message",
+                                    "sampleData": {},
+                                    "pieceVersion": "0.17.9",
+                                    "propertySettings": {
+                                      "file": {
+                                        "type": "MANUAL"
+                                      },
+                                      "info": {
+                                        "type": "MANUAL"
+                                      },
+                                      "text": {
+                                        "type": "MANUAL"
+                                      },
+                                      "blocks": {
+                                        "type": "MANUAL"
+                                      },
+                                      "channel": {
+                                        "type": "MANUAL"
+                                      },
+                                      "threadTs": {
+                                        "type": "MANUAL"
+                                      },
+                                      "username": {
+                                        "type": "MANUAL"
+                                      },
+                                      "iconEmoji": {
+                                        "type": "MANUAL"
+                                      },
+                                      "sendAsBot": {
+                                        "type": "MANUAL"
+                                      },
+                                      "unfurlLinks": {
+                                        "type": "MANUAL"
+                                      },
+                                      "profilePicture": {
+                                        "type": "MANUAL"
+                                      },
+                                      "replyBroadcast": {
+                                        "type": "MANUAL"
+                                      },
+                                      "mentionOriginFlow": {
+                                        "type": "MANUAL"
+                                      }
+                                    },
+                                    "errorHandlingOptions": {
+                                      "retryOnFailure": {
+                                        "value": false
+                                      },
+                                      "continueOnFailure": {
+                                        "value": false
+                                      }
+                                    }
+                                  },
+                                  "displayName": "Send Message To A Channel",
+                                  "lastUpdatedDate": "2026-08-31T09:28:03.936Z"
+                                }
+                              ],
+                              "settings": {
+                                "branches": [
+                                  {
+                                    "branchName": "EMAIL",
+                                    "branchType": "CONDITION",
+                                    "conditions": [
+                                      [
+                                        {
+                                          "operator": "TEXT_EXACTLY_MATCHES",
+                                          "firstValue": "{{step_8['output']}}",
+                                          "secondValue": "email",
+                                          "caseSensitive": false
+                                        }
+                                      ]
+                                    ]
+                                  },
+                                  {
+                                    "branchName": "Otherwise",
+                                    "branchType": "FALLBACK"
+                                  }
+                                ],
+                                "sampleData": {},
+                                "executionType": "EXECUTE_FIRST_MATCH"
+                              },
+                              "displayName": "Router",
+                              "lastUpdatedDate": "2026-08-31T09:28:03.935Z"
+                            },
+                            "displayName": "Get",
+                            "lastUpdatedDate": "2026-08-31T09:28:03.935Z"
+                          },
+                          "displayName": "Ask LLM",
+                          "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+                        },
+                        "displayName": "Code",
+                        "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+                      },
+                      "displayName": "Code",
+                      "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+                    },
+                    "displayName": "Code",
+                    "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+                  },
+                  "displayName": "Code",
+                  "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+                },
+                "displayName": "Find Email",
+                "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+              },
+              "displayName": "Get",
+              "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+            },
+            "displayName": "Code",
+            "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+          },
+          "displayName": "Get",
+          "lastUpdatedDate": "2026-08-31T09:28:03.934Z"
+        },
+        "lastUpdatedDate": "2026-08-31T09:28:03.934Z",
+        "type": "PIECE_TRIGGER",
+        "settings": {
+          "sampleData": {},
+          "propertySettings": {
+            "timezone": {
+              "type": "MANUAL"
+            },
+            "hour_of_the_day": {
+              "type": "MANUAL"
+            },
+            "run_on_weekends": {
+              "type": "MANUAL"
+            }
+          },
+          "pieceName": "@activepieces/piece-schedule",
+          "pieceVersion": "0.1.22",
+          "triggerName": "every_day",
+          "input": {
+            "timezone": "Asia/Kolkata",
+            "hour_of_the_day": 7,
+            "run_on_weekends": true
+          }
+        }
+      },
+      "valid": true,
+      "schemaVersion": "24",
+      "notes": []
+    }
+  ],
+  "status": "PUBLISHED"
+}
